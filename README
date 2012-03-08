@@ -1,6 +1,6 @@
 # Puppet Duplicity
 
-Install duplicity and quickly setup complete system backup to amazon s3 or rackspace
+Install duplicity and quickly setup complete system backup to amazon s3
 
 ## Variables
 
