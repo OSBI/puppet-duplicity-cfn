@@ -1,0 +1,87 @@
+#!/bin/sh
+ 
+### Duplicity Setup ###
+AWS_ACCESS_KEY_ID_OLD="$(echo $AWS_ACCESS_KEY_ID)"
+AWS_SECRET_ACCESS_KEY_OLD="$(echo $AWS_SECRET_ACCESS_KEY)"
+export AWS_ACCESS_KEY_ID='<%= cfn_access_id %>'
+export AWS_SECRET_ACCESS_KEY='<%= cfn_secret_key %>'
+# DESTOPTIONS MAY INCLUDE "--s3-use-rrs"
+DESTOPTIONS="--s3-use-new-style"
+ 
+# This needs to be a newline separated list of files and directories to backup
+INCLUDEFILES="/etc/duplicity/backup-filelist.txt"
+ 
+FILEDESTINATION="s3+http://<%= cfn_file_dest %>"
+ 
+EXTRADUPLICITYOPTIONS="--no-encryption"
+ 
+FULLDAYS="30D"
+MAXFULL=3
+ 
+### MySQL Setup ###
+# Change to 1 to enable - Make sure to add information to Puppet
+BACKUPMYSQL=0
+ 
+###### End Of Editable Parts ######
+ 
+### Commands ###
+if [[ -n "$BACKUPMYSQL" && "$BACKUPMYSQL" -gt 0 ]]; then
+ MYSQLTMPDIR="$(mktemp -d)"
+ MYSQL="$(which mysql)"
+ MYSQLDUMP="$(which mysqldump)"
+ GZIP="$(which gzip)"
+fi
+DUPLICITY="$(which duplicity)"
+ 
+if [[ -n "$BACKUPMYSQL" && "$BACKUPMYSQL" -gt 0 ]]; then
+ if [[ -n "$MYSQL" || -n "$MYSQL" || -n "$MYSQLDUMP" || -n "$GZIP" ]]; then
+  echo "Not all MySQL commands found."
+  exit 2
+ fi
+fi
+if [ ! -n "$DUPLICITY"  ]; then
+ echo "Duplicity not found."
+ exit 2
+fi
+ 
+### Dump MySQL Databases ###
+if [[ -n "$BACKUPMYSQL" && "$BACKUPMYSQL" -gt 0 ]]; then
+ # Get all databases name
+ DBS="$($MYSQL -u $MUSER -h $MHOST -p$MPASS -Bse 'show databases')"
+ for db in $DBS
+ do
+  if [ "$db" != "information_schema" ]; then
+   $MYSQLDUMP -u $MUSER -h $MHOST -p$MPASS $db | $GZIP -9 > $MYSQLTMPDIR/mysql-$db
+  fi
+ done
+fi
+ 
+### Backup files ###
+if [ -n "$FILEDESTINATION" ]; then
+ $DUPLICITY --full-if-older-than $FULLDAYS $DESTOPTIONS $EXTRADUPLICITYOPTIONS --include-globbing-filelist $INCLUDEFILES --exclude '**' / $FILEDESTINATION
+fi
+if [[ -n "$BACKUPMYSQL" && "$BACKUPMYSQL" -gt 0 ]]; then
+ if [ -n "$MYSQLDESTINATION" ]; then
+  $DUPLICITY --full-if-older-than $FULLDAYS $DESTOPTIONS $EXTRADUPLICITYOPTIONS --allow-source-mismatch $MYSQLTMPDIR $MYSQLDESTINATION
+ fi
+fi
+ 
+### Cleanup ###
+if [[ -n "$MAXFULL" && "$MAXFULL" -gt 0 ]]; then
+ if [ -n "$FILEDESTINATION" ]; then
+  $DUPLICITY remove-all-but-n-full $MAXFULL $FILEDESTINATION
+ fi
+ if [[ -n "$BACKUPMYSQL" && "$BACKUPMYSQL" -gt 0 ]]; then
+  if [ -n "$MYSQLDESTINATION" ]; then
+   $DUPLICITY remove-all-but-n-full $MAXFULL $MYSQLDESTINATION
+  fi
+ fi
+fi
+if [[ -n "$BACKUPMYSQL" && "$BACKUPMYSQL" -gt 0 ]]; then
+ rm -rf $MYSQLTMPDIR
+fi
+
+export AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID_OLD
+export AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY_OLD
+
+exit 0
