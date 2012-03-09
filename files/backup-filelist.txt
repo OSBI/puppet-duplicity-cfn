@@ -1,3 +1,0 @@
-/srv/workspace
-/srv/eclipse/serverworkspace
-/var/lib/jenkins

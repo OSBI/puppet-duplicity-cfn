@@ -6,7 +6,10 @@
 #   - Install the duplicity package
 #
 # Sample Usage:
-#  class { 'duplicity': }
+#  class { 'duplicity': 
+#    backup_dirs => '/srv/workspace
+		/srv/eclipse/serverworkspace'
+#  }
 #
 class duplicity {
   package {['duplicity','python-boto']: 
@@ -34,7 +37,7 @@ class duplicity {
 	
 	file { 'backup-filelist' :
 	  path		=> '/etc/duplicity/backup-filelist.txt',
-	  source	=> 'puppet:///modules/duplicity/backup-filelist.txt',
+	  content	=> "$backup_dirs",
 	  ensure	=> file,
 	  mode		=> 644,
 	  require	=> [File['/etc/duplicity'], Package['duplicity','python-boto']],
