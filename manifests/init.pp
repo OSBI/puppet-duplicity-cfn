@@ -8,15 +8,16 @@
 # Sample Usage:
 #  class { 'duplicity': 
 #    backup_dirs => '/srv/workspace
-		/srv/eclipse/serverworkspace'
+#		/srv/eclipse/serverworkspace'
 #  }
 #
-class duplicity {
+class duplicity ( $backup_filelist ) {
+  
   package {['duplicity','python-boto']: 
     ensure 	=> latest,
   }
   
-  if ($cfn_backup_action = 'backup' or $cfn_backup_action = 'restore' {
+  if ($cfn_backup_action == 'backup' or $cfn_backup_action == 'restore') {
 	
     if (!$cfn_file_dest) {
       fail('You need to define a file destination for backups!')
@@ -37,13 +38,13 @@ class duplicity {
 	
 	file { 'backup-filelist' :
 	  path		=> '/etc/duplicity/backup-filelist.txt',
-	  content	=> "$backup_dirs",
+	  content	=> "$backup_filelist",
 	  ensure	=> file,
 	  mode		=> 644,
 	  require	=> [File['/etc/duplicity'], Package['duplicity','python-boto']],
 	}
 	
-	if ($cfn_backup_action = 'backup' {
+	if ($cfn_backup_action == 'backup') {
 	  
       file { "cloud-backup.sh":
         path 	=> '/root/scripts/cloud-backup.sh',
