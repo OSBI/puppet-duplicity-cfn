@@ -4,12 +4,11 @@ Install duplicity and quickly setup complete system backup to amazon s3
 
 ## Variables
 
-1. $cfn_backup_action is either backup, restore, or none
-2. $cfn_file_dest Amazon S3 Bucket Name
-3. $cfn_access_id (aws access key id)
-4. $cfn_secret_key (aws_secret_access_key)
-5. files/backup-filelist.txt
-	A newline separated list of files and directories to backup
+1. $backup_action = either backup, restore, or none
+2. $file_dest = Amazon S3 Bucket Name
+3. $access_id = (aws access key id)
+4. $secret_key = (aws_secret_access_key)
+5. $backup-filelist = A newline separated list of files and directories to backup
 
 ## Setup
 

@@ -1,28 +1,45 @@
 # Class: duplicity
 #
-# This class installs duplicity
+# This module manages backups using duplicity
+#
+# Parameters:
+#
+#	$backup_action = ['backup' | 'restore' | 'none']
+#	$file_dest = "S3 Address for backup files"
+#	$access_id = "BackupAgent AWS Access Key Id"
+#	$access_key = "BackupAgent AWS Secret Access Key"
+#	$backup_filelist = '/etc
+#						/home'
 #
 # Actions:
 #   - Install the duplicity package
 #
+# Requires:
+#
 # Sample Usage:
 #  class { 'duplicity': 
-#    backup_dirs => '/srv/workspace
-#		/srv/eclipse/serverworkspace'
+#    backup_filelist => '/etc
+#						 /home'
 #  }
 #
-class duplicity ( $backup_filelist ) {
+class duplicity (
+	$backup_action = $::cfn_backup_action,
+	$file_dest = $::cfn_file_dest,
+	$access_id = $::cfn_access_id,
+	$secret_key = $::cfn_secret_key,
+	$backup_filelist
+) {
   
   package {['duplicity','python-boto']: 
     ensure 	=> latest,
   }
   
-  if ($cfn_backup_action == 'backup' or $cfn_backup_action == 'restore') {
+  if ($backup_action == 'backup' or $backup_action == 'restore') {
 	
-    if (!$cfn_file_dest) {
+    if (!$file_dest) {
       fail('You need to define a file destination for backups!')
     }
-    if (!$cfn_access_id or !$cfn_secret_key) {
+    if (!$access_id or !$secret_key) {
       fail("You need to set all of your key variables: aws_access_key_id and aws_secret_access_key")
     }
 	
@@ -44,7 +61,7 @@ class duplicity ( $backup_filelist ) {
 	  require	=> [File['/etc/duplicity'], Package['duplicity','python-boto']],
 	}
 	
-	if ($cfn_backup_action == 'backup') {
+	if ($backup_action == 'backup') {
 	  
       file { "cloud-backup.sh":
         path 	=> '/root/scripts/cloud-backup.sh',
@@ -55,12 +72,12 @@ class duplicity ( $backup_filelist ) {
       }
 	  
       cron { 'duplicity_backup_cron':
-        command 	=> '/bin/sh /root/scripts/cloud-backup.sh',
+        command => '/bin/sh /root/scripts/cloud-backup.sh',
 	    ensure	=> present,
-        user 		=> 'root',
+        user 	=> 'root',
         minute 	=> 0,
-        hour 		=> 10,
-        require 	=> [ File['cloud-backup.sh'] ],
+        hour 	=> 10,
+        require => [ File['cloud-backup.sh'] ],
       }
 	} else {
 	  
